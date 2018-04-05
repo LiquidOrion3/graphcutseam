@@ -1,0 +1,186 @@
+package Main;
+
+public class node {
+
+	int x;
+	int y;
+
+	int relation_up;
+	int relation_down;
+	int relation_right;
+	int relation_left;
+
+	int original_color;
+	//int gradient_value;
+
+	node left;
+	node right;
+
+	node seam = null;
+	int direction = 0;
+	int total = 0;
+
+	// for end nodes
+	int w;
+	int h;
+	public node[] nodes;
+
+	public void endNode(int w, int h) {
+		this.w = w;
+		this.h = w;
+		nodes = new node[h];
+	}
+
+	public void setNodes(int index, node node) {
+		nodes[index] = node;
+	}
+
+	public node getNode(int index) {
+		return nodes[index];
+	}
+
+	// end for end nodes
+
+	public void setXY(int x, int y) {
+		this.x = x;
+		this.y = y;
+	}
+
+	public int getX() {
+		return x;
+	}
+
+	public int getY() {
+		return y;
+	}
+
+	public void setRelations(int up, int down, int left, int right) {
+		relation_up = up;
+		relation_down = down;
+		relation_left = left;
+		relation_right = right;
+	}
+
+	public void setL(node left) {
+		this.left = left;
+	}
+
+	public void setR(node right) {
+		this.right = right;
+	}
+
+	public node getL() {
+		return left;
+	}
+
+	public node getR() {
+		return right;
+	}
+
+	public void setOriginal(int color) {
+		this.original_color = color;
+	}
+
+	public int getOriginal() {
+		return original_color;
+	}
+
+	public void setSeam(node next, int direction) {
+		if (seam != this) {
+
+			if (direction == 1) {
+				total += relation_up;
+			} else if (direction == 2) {
+				total = relation_right;
+			} else if (direction == 4) {
+				total = relation_left;
+			}
+		}
+		seam = next;
+		this.direction = direction;
+	}
+
+	public node getSeam() {
+		return seam;
+	}
+
+	public int getDirection() {
+		return direction;
+	}
+
+	public boolean checkBest(node[][] panel) {
+		if (direction == 0) {
+
+			if (relation_left <= relation_right) {
+				seam = this;
+				direction = 3;
+			} else {
+				seam = this;
+				direction = 1;
+			}
+
+		} else if (direction == 1) {
+
+			node down = panel[x][y + 1];
+			node right = down.getR();
+
+			if ((down.relation_right <= down.relation_up)
+					& (down.relation_right <= right.relation_up)) {
+				seam = down;
+				direction = 1;
+			} else if ((down.relation_up <= down.relation_right)
+					& (down.relation_up <= right.relation_up)) {
+				seam = down;
+				direction = 0;
+			} else {
+				seam = right;
+				direction = 0;
+			}
+
+		} else if (direction == 3) {
+
+			node down = panel[x][y + 1];
+			node left = down.getL();
+
+			if ((down.relation_left <= down.relation_up)
+					& (down.relation_left <= left.relation_up)) {
+				seam = down;
+				direction = 3;
+			} else if ((left.relation_up <= down.relation_left)
+					& (left.relation_up <= down.relation_up)) {
+				seam = left;
+				direction = 0;
+			} else {
+				seam = down;
+				direction = 0;
+			}
+
+		}
+
+		return false;
+
+	}
+
+	public int getBestRelation() {
+		if (direction == 0) {
+			return relation_up;
+
+		} else if (direction == 1) {
+			return relation_right;
+		} else if (direction == 2) {
+			return relation_down;
+		} else if (direction == 3) {
+			return relation_left;
+		} else {
+			return Integer.MAX_VALUE;
+		}
+	}
+}
+
+// public void setGradient(int gradient){
+// gradient_value=gradient;
+// }
+// public int getGradient(){
+// return gradient_value;
+// }
+
