@@ -1,0 +1,403 @@
+package Main;
+import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.IOException;
+import javax.imageio.ImageIO;
+import javax.swing.JFrame;
+
+public class Main2 extends JFrame {
+	public static void main(String args[]) throws InterruptedException {
+		new Main2();
+	}
+
+	public Main2() {
+
+		/**
+		 * Description of possible algorithm
+		 * 
+		 * 1st concept for single image load image into cube *in single case it
+		 * is matrix connect nodes from left and right only for each node
+		 * contain relations for 4 cardinal directions = difference in
+		 * similarity for each node in top row perform greedy search to find
+		 * where similarity is highest each node had list previous node and
+		 * direction of lowest when complete a linked list shows seam that has
+		 * highest similarity to neighbor for each node in seam break left or
+		 * right node connections when complete two graphs result a left and
+		 * right graph calculate which side to remove pixels from remove seam of
+		 * pixels one one side - possibly remove lower connection from each side
+		 * reconnect graphs to create one image again
+		 * 
+		 * 
+		 * 
+		 * 
+		 */
+		go();
+	}
+
+	int w;
+	int h;
+
+	node east = new node();
+	node west = new node();
+
+	node[][][] cube;
+
+	int intype = 0;
+	boolean show=true;
+
+	public void go() {
+
+		loadFiles(1, "res", "tower");
+		// cube is populated with one image
+		// node matrix is populated with x, y and color of pixel
+		east.endNode(w, h);
+		west.endNode(w, h);
+		// left and right nodes are set to accept edges
+
+		leftConnection(cube[0]);
+		rightConnection(cube[0]);
+		// nodes are connected from left and right sides
+
+		relations(cube[0]);
+		seamer(cube[0]);
+		//split(cube[0],w/2);
+		// graphs are separate, left and right
+
+		// skimRight();
+		skimLeft();
+		// end of graph is removed
+		
+		if(!show)
+		patch();
+		//nodes left and right connections patched
+		
+		LRpaint();
+		leftPaint();
+		rightPaint();
+		// graphs are painted together
+
+	}
+
+	// set up information
+	public void loadFiles(int numFiles, String locFiles, String namFiles) {
+
+		BufferedImage in;
+		try {
+
+			in = ImageIO.read(new File(locFiles + "/" + namFiles + ".png"));
+
+			w = in.getWidth();// set w & h
+			h = in.getHeight();
+			intype = in.getType();
+
+			cube = new node[numFiles][w][h];
+			createNodes(cube[0], in);
+
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+
+	}
+
+	public void createNodes(node[][] panel, BufferedImage in) {
+
+		for (int y = 0; y < h; y++) {
+			for (int x = 0; x < w; x++) {
+				node temp = new node();
+				temp.setXY(x, y);
+				temp.setOriginal(in.getRGB(x, y));
+				panel[x][y] = temp;
+			}
+		}
+
+	}
+
+	
+	// connect virtual nodes
+	public void leftConnection(node[][] panel) {
+		for (int x = 0; x < w; x++) {
+			for (int y = 0; y < h; y++) {
+
+				if (x == 0) {
+					east.setNodes(y, panel[x][y]);
+					panel[x][y].setL(east);
+				} else {
+					panel[x][y].setL(panel[x - 1][y]);
+				}
+
+			}
+		}
+
+	}
+
+	public void rightConnection(node[][] panel) {
+		for (int x = w - 1; x >= 0; x--) {
+			for (int y = 0; y < h; y++) {
+
+				if (x == w - 1) {
+					west.setNodes(y, panel[x][y]);
+					panel[x][y].setR(west);
+				} else {
+					panel[x][y].setR(panel[x + 1][y]);
+				}
+
+			}
+		}
+	}
+
+	
+	// 4 way relations are set up
+	public void relations(node[][] panel) {
+
+		int up = Integer.MAX_VALUE;
+		int down = Integer.MAX_VALUE;
+		int left = Integer.MAX_VALUE;
+		int right = Integer.MAX_VALUE;
+
+		east.setRelations(up, down, left, right);
+		west.setRelations(up, down, left, right);
+
+		int[] grid = new int[5];
+
+		int red = 0;
+		int blue = 0;
+		int green = 0;
+
+		for (int y = 0; y < h; y++) {
+			for (int x = 0; x < w; x++) {
+
+				node focus = panel[x][y];
+
+				red = (focus.getOriginal() & 0x000000ff);
+				blue = (focus.getOriginal() & 0x0000ff00) >> 8;
+				green = (focus.getOriginal() & 0x00ff0000) >> 16;
+				grid[0] = Math.abs(red + blue + green);
+
+				if ((y - 1) >= 0) {
+					red = (panel[x][y - 1].getOriginal() & 0x000000ff);
+					blue = (panel[x][y - 1].getOriginal() & 0x0000ff00) >> 8;
+					green = (panel[x][y - 1].getOriginal() & 0x00ff0000) >> 16;
+					grid[1] = -1 * (Math.abs(red + blue + green));
+				}
+				if ((x + 1) < w) {
+					red = (panel[x + 1][y].getOriginal() & 0x000000ff);
+					blue = (panel[x + 1][y].getOriginal() & 0x0000ff00) >> 8;
+					green = (panel[x + 1][y].getOriginal() & 0x00ff0000) >> 16;
+					grid[2] = -1 * (Math.abs(red + blue + green));
+				}
+				if ((y + 1) < h) {
+					red = (panel[x][y + 1].getOriginal() & 0x000000ff);
+					blue = (panel[x][y + 1].getOriginal() & 0x0000ff00) >> 8;
+					green = (panel[x][y + 1].getOriginal() & 0x00ff0000) >> 16;
+					grid[3] = -1 * (Math.abs(red + blue + green));
+				}
+				if ((x - 1) >= 0) {
+					red = (panel[x - 1][y].getOriginal() & 0x000000ff);
+					blue = (panel[x - 1][y].getOriginal() & 0x0000ff00) >> 8;
+					green = (panel[x - 1][y].getOriginal() & 0x00ff0000) >> 16;
+					grid[4] = -1 * (Math.abs(red + blue + green));
+				}
+
+				up = Math.abs(grid[0] + grid[1]);
+				down = Math.abs(grid[0] + grid[2]);
+				left = Math.abs(grid[0] + grid[3]);
+				right = Math.abs(grid[0] + grid[4]);
+
+				focus.setRelations(up, down, left, right);
+
+			}
+		}
+
+	}
+
+	
+	//greedy seam finder by node
+	public void seamer(node[][] panel) {
+
+		// can remove greedy seam from image given starting pixel
+		//
+		// extend to compare all seams to find optimal
+		//
+		// extend to find dynamic programming solution or min-cut solution
+
+		int total = 0;
+
+		node focus = panel[w / 2][0];
+
+		while ((focus != null) & (focus.getY() != h - 1)) {
+			focus.checkBest(panel);
+			node rightmost = focus.getR();
+			focus.setR(null);
+			if (rightmost != null)
+				rightmost.setL(null);
+			total += focus.getBestRelation();
+			focus = focus.getSeam();
+
+		}
+
+		// focus.checkBest(panel);
+		// focus.getDirection();
+		// focus.getSeam();
+		// focus.getY();
+
+	}
+
+	
+	// split left and right by line
+	public void split(node[][] panel,int split) {
+		for (int y = 0; y < h; y++) {
+			panel[split][y].setR(null);
+			panel[split + 1][y].setL(null);
+		}
+
+	}
+
+	
+	// patch node connections
+	public void patch(){
+		
+		node focusLeft;
+		node focusRight;
+
+		for (int y = 0; y < h; y++) {
+			focusLeft = east.getNode(y);
+			while (focusLeft.getR() != null) {
+				focusLeft = focusLeft.getR();
+			}
+			focusRight = west.getNode(y);
+			while (focusRight.getL() != null) {
+				focusRight = focusRight.getL();
+			}
+			node safeLeft=focusLeft.getL();
+			node safeRight=focusRight.getR();
+
+			if(safeLeft!=null)
+			safeLeft.setR(safeRight);
+			if(safeRight!=null)
+			safeRight.setL(safeLeft);
+
+		}
+
+	}
+		
+		
+	// remove split
+	public void skimLeft() {
+		node focus;
+		for (int y = 0; y < h; y++) {
+			focus = east.getNode(y);
+			while (focus.getR() != null) {
+				focus = focus.getR();
+			}
+			node safe = focus.getL();
+			if (safe != null)
+				safe.setR(null);
+
+		}
+
+	}
+
+	public void skimRight() {
+		node focus;
+		for (int y = 0; y < h; y++) {
+			focus = west.getNode(y);
+			while (focus.getL() != null) {
+				focus = focus.getL();
+			}
+			node safe = focus.getR();
+			safe.setL(null);
+
+		}
+
+	}
+
+	
+	// paint
+	public void LRpaint() {
+
+		BufferedImage i = new BufferedImage(w, h, intype);
+		node focus;
+		//left painting
+		for (int y = 0; y < h; y++) {
+			focus = east.getNode(y);
+			for (int x = 0; x < w; x++) {
+				if (focus != null) {
+					i.setRGB(x, y, focus.getOriginal());
+					focus = focus.getR();
+				}
+
+			}
+		}
+		//right painting
+		int val=1;
+		if(show){
+			val=0;
+		}
+		for (int y = 0; y < h; y++) {
+			focus = west.getNode(y);
+			for (int x = w - 1; x >= val; x--) {
+				if (focus != null) {
+					i.setRGB(x-val, y, focus.getOriginal());
+					focus = focus.getL();
+				}
+
+			}
+		}
+
+		try {
+			File f = new File("total.png");
+			ImageIO.write(i, "PNG", f);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+
+	}
+
+	public void leftPaint() {
+
+		BufferedImage i = new BufferedImage(w, h, intype);
+		node focus;
+		for (int y = 0; y < h; y++) {
+			focus = east.getNode(y);
+			for (int x = 0; x < w; x++) {
+				if (focus != null) {
+					i.setRGB(x, y, focus.getOriginal());
+					focus = focus.getR();
+				}
+			}
+		}
+
+		try {
+			File f = new File("left.png");
+			ImageIO.write(i, "PNG", f);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+
+	}
+
+	public void rightPaint() {
+
+		BufferedImage i = new BufferedImage(w, h, intype);
+		node focus;
+		for (int y = 0; y < h; y++) {
+			focus = west.getNode(y);
+			for (int x = w - 1; x >= 0; x--) {
+				if (focus != null) {
+					i.setRGB(x, y, focus.getOriginal());
+					focus = focus.getL();
+				}
+
+			}
+		}
+
+		try {
+			File f = new File("right.png");
+			ImageIO.write(i, "PNG", f);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+
+	}
+
+}
